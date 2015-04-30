@@ -9,7 +9,12 @@
 //Accessing Namespace Standard
 using namespace std;
 
-enum AddrMode {Direct, Indirect, Indexed, Indirect, IndexedIndirect };
+enum AddrMode {Direct, 
+               Immidiate, 
+               Indexed, 
+               Indirect, 
+               IndexedIndirect,
+               Illegal};
 
 
                           //Description                        |Addr Modes
@@ -32,15 +37,15 @@ enum Operation{HALT = 0,  //Stop Execution                     |Ignored
                ADDX = 40, //Not Implimented                    |
                SUBX = 41, //Not Implimented                    |
                CLRX = 42, //Not Implimented                    |
-               J    = 48, //Jump to memory address             |not immidiate
-               JZ   = 49, //If accumulator is zero: jump       |not immidiate
-               JN   = 50, //If accumulator is negative: jump   |not immidiate
-               JP   = 51};//If accumulator is positive: jump   |not immidiate
-
+               J    = 48, //Jump to memory address             |Not immidiate
+               JZ   = 49, //If accumulator is zero: jump       |Not immidiate
+               JN   = 50, //If accumulator is negative: jump   |Not immidiate
+               JP   = 51  //If accumulator is positive: jump   |Not immidiate
+               };
 //Function Prototypes
 
 //Enumerated Types
-enum register { MAR ,       //Memory Address Reg - Address of the mem location
+enum Register { MAR ,       //Memory Address Reg - Address of the mem location
                             // to load or store
                 IC ,        //Instruction Counter - instruction to be fetched
                 X0 ,        //Index Register - Used for calculations
@@ -66,11 +71,18 @@ struct Instruction
   AddrMode mode;
 };
 
+int instruc_execute();
+
+bool OppNotImplimented  ( Operation toTest );
+bool IgnoredAddrOpp     ( Operation toTest );
+bool AllAddrOpp         ( Operation toTest );
+bool NotImmidiateAddrOpp( Operation toTest );
+
 //***********************************MAIN************************************//
 //***************************************************************************//
 
 
-main( int argc, char* argv )
+main( int argc, char* argv[] )
 {
     //Local Variable Declaration
 
@@ -86,79 +98,17 @@ main( int argc, char* argv )
 }
 
 //Breaks apart the word into the ADDRESS, OPERATION and ADDRESSING MODE
-instruc_extract( Instruction &to_extract, int location )
+void instruc_extract( Instruction &to_extract, int location )
 {
-}
-
-int instruc_execute( )
-{
-  Instruction instruct;
-  instruc_extract( instruct, reg[IC] );
-  //Impliment HALT
-  if( instruct.operation == HALT )
-  {
-    return -1;//Stop Execution loop:
-  }
-  //Impliment NOP
-  else if( instruct.operation == NOP )
-  {
-    //Do nothing
-  }
-  //Impliment CLR
-  else if( instruct.operation == CLR )
-  {
-    reg[AC] = 0;
-  }
-  //Impliment COM
-  else if( instruct.operation == COM )
-  {
-    reg[ALU] = ^reg[AC];
-    reg[AC] = ^reg[ALU];
-  }
-  //Impliment Instructions That accept all addressing modes
-  else if( instruct.operation == LD  ||
-           instruct.operation == ADD ||
-           instruct.operation == SUB ||
-           instruct.operation == AND ||
-           instruct.operation == OR  ||
-           instruct.operation == XOR )
-  {
-    //Do operand fetching for the instruction
-    if( mode == Direct )
-    {
-      reg[DBUS] = instruct.operandAddr;
-    }
-    else if( mode == Immidiate )
-    {
-      reg[ABUS] = instruct.operandAddr;
-      reg[DBUS] = mem[reg[ABUS]];
-      reg[MDR]  = reg[DBUS];
-    }
-    else if( mode <= IndexedIndirect )
-    {
-      return -3; //Unsupported Addressing Modes
-    }
-
-    if( instruct.operation == LD )
-    {
-      reg[AC] = reg[DBUS];
-    }
-  }
-  else
-  {
-    return -2; //Illegal Addressing Mode
-  }
-
-  
 }
 
 
 //Gives a null terminated string of the instruction being exected (e.g. ADD)
-instruc_abbrv()
+void instruc_abbrv()
 {
 }
 
-instruc_print()
+void instruc_print()
 {
 }
 
@@ -172,6 +122,198 @@ int read_file( char *file )
 
 //Fetch next instruction to instruction register
 //Increments IC to next instruction
-fill_IR()
+void fill_IR()
 {
+}
+
+//***************************************************************************//
+// int instruc_execute()                                                     //
+//                                                                           //
+// Author: Marcus Haberling                                                  //
+//                                                                           //
+// Description: Instruct execute takes the instruction stored in memory as   //
+//              specified in the Instruction Counter register (IC). It then  //
+//              executes the operation and alters the gloabal register array //
+//              to reflect the operation. It also returns error codes if the //
+//              HALT instruction is called, if the addressing mode is not    //
+//              implimented, the instruction is not implimented, or if the   //
+//              addressing mode is not allowed by the instruction.           //
+//                                                                           //
+// Returns  0: Operation executed                                            //
+//         -1: Halt operation executed                                       //
+//         -2: Operation not implimented                                     //
+//         -3: Address mode not implimented by the simulator                 //
+//         -4: Illegal addressing mode for the operation                     //
+//         -5: This should never happen. What did you do?                    //
+//                                                                           //
+//***************************************************************************//
+int instruc_execute( )
+{
+  Instruction instr;
+  instruc_extract( instr, reg[IC] );
+  reg[IC]++;
+
+  if( OppNotImplimented( instr.operation ) )
+  {
+    cout << "Operation not implimented by virtual machine." << endl;
+    return -2;
+  }
+  else if ( IgnoredAddrOpp ( instr.operation ) )
+  {
+    switch( instr.operation )
+    {
+    case NOP:
+      break;
+    case HALT:
+      cout << "Program Execution Halted" << endl;
+      return -1;
+      break;
+    case CLR:
+      reg[AC] = 0;
+      break;
+    case COM:
+      reg[AC] = ~reg[AC];
+      break;
+    }
+    return 0;
+  }
+  else if ( AllAddrOpp( instr.operation ) )
+  {
+    if( instr.mode == Direct  )
+    {
+      reg[ABUS] = instr.operandAddr;
+      reg[MDR]  = mem[reg[ABUS]];
+      reg[ALU]  = reg[MDR]; 
+    }
+    else if ( instr.mode == Immidiate )
+    {
+      reg[ALU] = instr.operandAddr;
+    }
+    else if ( instr.mode >= Indexed && instr.mode <= IndexedIndirect )
+    {
+      cout << "Address Mode not implimented." << endl;
+      return -3;
+    }
+    else
+    {
+      cout << "Illegal Addressing Mode" << endl;
+      return -4;
+    } 
+    switch( instr.operation )
+    {
+      case LD:
+        reg[AC] = reg[ALU];
+        break;
+      case ADD:
+        reg[AC] = reg[AC] + reg[ALU];
+        break;
+      case SUB:
+        reg[AC] = reg[AC] - reg[ALU];
+        break;
+      case AND:
+	reg[AC] = reg[AC] & reg[ALU];
+        break;
+      case OR:
+	reg[AC] = reg[AC] | reg[ALU];
+	break;
+      case XOR:
+	reg[AC] = reg[AC] ^ reg[ALU];
+	break;
+    }
+    return 0;
+  }
+  if ( NotImmidiateAddrOpp( instr.operation ) )
+  {
+    if( instr.mode == Direct  )
+    {
+      reg[ABUS] = instr.operandAddr;
+      reg[MDR]  = mem[reg[ABUS]];
+      reg[ALU]  = reg[MDR]; 
+    }
+    else if ( instr.mode >= Indexed && instr.mode <= IndexedIndirect )
+    {
+      cout << "Address Mode not implimented." << endl;
+      return -3;
+    }
+    else
+    {
+      cout << "Illegal Addressing Mode" << endl;
+      return -4;
+    } 
+    switch( instr.operation )
+    {
+      case ST:
+	reg[ABUS] = reg[ALU];
+	mem[reg[ABUS]] = reg[AC];
+	break;
+      case EM:
+	reg[ABUS] = reg[ALU];
+	reg[MDR]  = mem[reg[ABUS]];
+	mem[reg[ABUS]] = reg[AC];
+	reg[AC]   = reg[MDR];
+	break;
+      case J:
+	reg[IC] = reg[ALU];
+	break;
+      case JZ:
+	if( reg[AC] == 0 )
+	  reg[IC] = reg[ALU];
+	break;
+      case JN:
+	if( reg[AC] < 0 )
+	  reg[IC] = reg[ALU];
+	break;
+      case JP:
+	if( reg[AC] > 0 )
+	  reg[IC] = reg[ALU];
+	break;
+    }
+    return 0;
+  }
+  else
+  {
+    return -5; //This shouldn't be possible
+  }
+}
+
+bool OppNotImplimented( Operation toTest )
+{
+  return ( toTest == LDX  ||
+	   toTest == STX  ||
+	   toTest == EMX  ||
+	   toTest == ADDX ||
+	   toTest == SUBX ||
+	   toTest == CLRX
+	   );
+}
+
+bool IgnoredAddrOpp( Operation toTest )
+{
+  return ( toTest == HALT ||
+           toTest == NOP  ||
+           toTest == CLR  ||
+           toTest == COM 
+	 );
+}
+
+bool AllAddrOpp( Operation toTest )
+{
+  return ( toTest == LD  ||
+	   toTest == ADD ||
+	   toTest == SUB ||
+	   toTest == AND ||
+	   toTest == OR  ||
+	   toTest == XOR 
+	 );
+}
+
+bool NotImmidiateAddrOpp( Operation toTest )
+{
+  return ( toTest == ST ||
+	   toTest == EM ||
+	   toTest == J  ||
+	   toTest == JZ ||
+	   toTest == JN ||
+	   toTest == JP
+	 );
 }
