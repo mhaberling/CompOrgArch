@@ -97,9 +97,75 @@ main( int argc, char* argv[] )
     //Open Command Line Object file
 }
 
-//Breaks apart the word into the ADDRESS, OPERATION and ADDRESSING MODE
+//***************************************************************************//
+// int instruc_extract()                                                     //
+//                                                                           //
+// Author: Jason Anderson                                                    //
+//                                                                           //
+// Description: Instruct extract takes what is in a memory location and      //
+//		breaks it down into the address (bits 23-12), instruction    //
+//		(bits 11-6) and mode (bits 5-2).  It then sets the           //
+//		corresponding variable in the instruction structure to the   //
+//		correct value.                                               //
+//                                                                           //
+// Returns  None                                                             //
+//                                                                           //
+//***************************************************************************//
 void instruc_extract( Instruction &to_extract, int location )
 {
+  int addrMask[12][2] = {{8388608, 2048},
+                         {4194304, 1024},
+                         {2097152, 512},
+                         {1048576, 256},
+                         {524288, 128},
+                         {262144, 64},
+                         {131072, 32},
+                         {65536, 16},
+                         {32768, 8},
+                         {16384, 4},
+                         {8192, 2},
+                         {4096, 1}};
+
+  int instrMask[6][2] = {{2048,32},
+                         {1024,16},
+                         {512,8},
+                         {256,4},
+                         {128,2},
+                         {64,1}};
+
+  int modeMask[4][2]  = {{32,8},
+                         {16,4},
+                         {8,2},
+                         {4,1}};
+
+  int address = 0;
+  int instruction = 0;
+  int mode = 0;
+
+  for(int i = 0; i < 12; i++)
+    if(location >= addrMask[i][0])
+    {
+      location -= addrMask[i][0];
+      address += addrMask[i][1];
+    }
+
+  for(int i = 0; i < 6; i++)
+    if(location >= instrMask[i][0])
+    {
+      location -= instrMask[i][0];
+      instruction += instrMask[i][1];
+    }
+
+  for(int i = 0; i < 4; i++)
+    if(location >= modeMask[i][0])
+    {
+      location -= modeMask[i][0];
+      mode += modeMask[i][1];
+    }
+
+  instr.operandAddr = address;
+  instr.operation = instruction;
+  instr.mode = mode;
 }
 
 
