@@ -5,6 +5,9 @@
 //Pre-Processor Includes and Directives
 #include<iostream>
 #include<fstream>
+#include<string>
+#include<vector>
+#include <cstring>
 
 //Accessing Namespace Standard
 using namespace std;
@@ -15,7 +18,6 @@ enum AddrMode {Direct,
                Indirect, 
                IndexedIndirect,
                Illegal};
-
 
                           //Description                        |Addr Modes
                           //-----------------------------------+-------------
@@ -77,6 +79,7 @@ bool OppNotImplimented  ( Operation toTest );
 bool IgnoredAddrOpp     ( Operation toTest );
 bool AllAddrOpp         ( Operation toTest );
 bool NotImmidiateAddrOpp( Operation toTest );
+int read_file( char *file );
 
 //***********************************MAIN************************************//
 //***************************************************************************//
@@ -84,17 +87,17 @@ bool NotImmidiateAddrOpp( Operation toTest );
 
 main( int argc, char* argv[] )
 {
-    //Local Variable Declaration
-
-    //Verify Object file to simulate was passed, exit if no args
-    if( argc == 1 )
+    reg[IC] = read_file( argv[1] ); //X0 now contains program start
+    if( reg[IC] == -1 )
     {
-        cout << "No Object file passed to simulate. Exiting..." << endl;
-        return 1;
+        cout << "Object File is improperly formated or does not exist.\n"
+             << "Exiting..." << endl;
+        return -1;
     }
+    cout << "Starting on Instruction Address: " << std::hex << reg[IC] << endl;
 
-    //Begin Simulations Loop (Runs all command line Arguments )
-    //Open Command Line Object file
+    while( instruc_execute() == 0 )
+      cout << "Instruc Executed!" << endl;
 }
 
 //***************************************************************************//
@@ -163,9 +166,9 @@ void instruc_extract( Instruction &to_extract, int location )
       mode += modeMask[i][1];
     }
 
-  instr.operandAddr = address;
-  instr.operation = instruction;
-  instr.mode = mode;
+  to_extract.operandAddr = address;
+  to_extract.operation = Operation(instruction);
+  to_extract.mode = AddrMode(mode);
 }
 
 
@@ -184,13 +187,49 @@ void instruc_print()
 //Returns: byte in memory for IC (Program Start Location)
 int read_file( char *file )
 {
+  //Local Variable Declaration
+  fstream fin;                //File containing program to be read
+
+  //Open File specified on command line
+  fin.open( file );
+ 
+  //Failed to open file to be read, exit program
+  if( !fin )
+  {
+    return -1;
+  }
+
+  //int mem[4096], global virtual memory
+
+  while( !fin.eof() )
+  {  
+    fin >> hex >> reg[MAR];
+        //Should error check to verify we got a number back
+    if( fin.eof() ) //End of file flag tripped, last address read is start
+    {
+      return reg[MAR];
+    }
+
+        //Get and store counter
+    fin >> dec >> reg[X3];
+
+        //Read counter(reg[AC]) times and store it sequentially in memory
+    for( reg[AC] = 0; reg[AC] < reg[X3]; reg[AC]++ )
+    {
+      fin >> hex >> reg[MDR];
+      mem[ reg[MAR]+reg[AC] ] = reg[MDR];
+    }
+  }
+
+    return reg[MAR];
 }
+
 
 //Fetch next instruction to instruction register
 //Increments IC to next instruction
-void fill_IR()
-{
-}
+//void fill_IR()
+//{
+//}
 
 //***************************************************************************//
 // int instruc_execute()                                                     //
@@ -217,6 +256,9 @@ int instruc_execute( )
 {
   Instruction instr;
   instruc_extract( instr, reg[IC] );
+  cout<< "Extracted Instruction" << endl 
+      << instr.operandAddr << endl 
+      << instr.operation << endl << instr.mode << endl;
   reg[IC]++;
 
   if( OppNotImplimented( instr.operation ) )
