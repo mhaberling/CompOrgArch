@@ -1,0 +1,28 @@
+Jason Anderson, Marcus Haberling, Erik Lunde
+b17
+CSC 317
+Dr. C Karlsson
+
+Description
+
+This program takes an object file as a command line parameter.  The object file is then sent to the read_file function.  The read file function fills the reg array with the contents of the object file.  The program then runs the instruc_execute function, which executes all of the instructions in the object file. 
+
+Algorithm
+Add more here 
+
+Read file is called by main and its job is to read in all of the contents of the object file.  The object file has to be correctly formatted otherwise an error will occur.  Read file fills the register array with the information from the object file.
+
+Instruc_execute sends whatever is in the instruction counter spot of the register array to the instruc_extract function described below.  Instruct_execute then checks to see if the operation is not implemented,  ignored address operation, or immediate.  If the operation is not implemented then it prints out a statement and returns.  If the operation is an ignored address operation then it sends the code to the appropriate subsection, including: NOP, HALT, CLR, and COM.  Add more here.
+
+Instruc_extract takes a location and a instruction structured object.  It then extracts the address from the location by getting only the upper 12 bits of the number.  It then stores the address into the operandAddr location of the structure.  The function then gets a value from the next highest 6 bits of the location and stores it into the operation location of the structure.  It finally gets the next highest 4 bits of the location and stores that into the mode location of the structure.  The lowest 2 bits of location are not used and can be anything.
+
+Instruc_print function prints a formatted output of the operations the program just ran.
+
+This program is compiled normally:
+	g++ -o b17 b17.cpp
+
+This program is run by typing b17
+
+This program was tested by add more here.
+
+This documentation file is submitted along with the program file, and the makefile.
